@@ -1,6 +1,6 @@
 # nu_plugin_port_scan
 
-A nushell plugin for scanning ports on a target
+A [nushell](https://www.nushell.sh/) plugin for scanning ports on a target
 
 Similar to `nc -vz {ip} {port} -w {timeout}` the parameters are mapped to `port scan {ip} {port} -t {timeout}`
 
@@ -34,5 +34,5 @@ Similar to `nc -vz {ip} {port} -w {timeout}` the parameters are mapped to `port 
 git clone https://github.com/FMotalleb/nu_plugin_port_scan.git
 cd nu_plugin_port_scan
 cargo build
-register target/release/nu_plugin_port_scan
+register target/debug/nu_plugin_port_scan
 ```
