@@ -26,6 +26,18 @@ Similar to `nc -vz {ip} {port} -w {timeout}` the parameters are mapped to `port 
 ╰───┴─────────┴──────┴────────┴─────────┴──────────────────╯
 ```
 
+```bash
+~> [8.8.8.8, 1.1.1.1, 1.0.0.1, 4.2.2.4] | par-each { |it| port scan $it 53 -t 1sec } |  where is_open | collect { $in } | sort-by elapsed
+╭───┬─────────┬──────┬────────┬─────────┬──────────────────╮
+│ # │ address │ port │ result │ is_open │     elapsed      │
+├───┼─────────┼──────┼────────┼─────────┼──────────────────┤
+│ 0 │ 8.8.8.8 │   53 │ Open   │ true    │ 40ms 519µs 900ns │
+│ 1 │ 1.0.0.1 │   53 │ Open   │ true    │ 93ms 471µs 500ns │
+│ 2 │ 4.2.2.4 │   53 │ Open   │ true    │       97ms 130µs │
+│ 3 │ 1.1.1.1 │   53 │ Open   │ true    │ 99ms 867µs 500ns │
+╰───┴─────────┴──────┴────────┴─────────┴──────────────────╯
+```
+
 ## Installing
 
 * via git
