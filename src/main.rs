@@ -123,9 +123,9 @@ impl nu_plugin::Plugin for Plugin {
             true => "Open",
             false => "Closed",
         };
-        let elapsed = match elapsed.try_into() {
+        let elapsed: i64 = match elapsed.try_into() {
             Ok(elapsed) => elapsed,
-            Err(_) => -1,
+            Err(_) => 0,
         };
         Ok(Value::record(
             record! {
@@ -133,7 +133,7 @@ impl nu_plugin::Plugin for Plugin {
                 "port" => Value::int(real_port, port.span()),
                 "result" => Value::string(str_result, call.head),
                 "is_open"=> Value::bool(is_open, call.head),
-                "elapsed" =>  Value::int(elapsed, call.head),
+                "elapsed" =>  Value::duration(elapsed, call.head),
             },
             call.head,
         ))
@@ -152,7 +152,7 @@ fn scan(call: &EvaluatedCall, target_address: SocketAddr) -> Result<(bool, u128)
 
     let now = Instant::now();
     let is_open = check_connection(target_address, duration);
-    let elapsed = now.elapsed().as_millis();
+    let elapsed = now.elapsed().as_nanos();
 
     Ok((is_open, elapsed))
 }
