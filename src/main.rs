@@ -1,11 +1,12 @@
-use core::panic;
 use std::{
     net::{SocketAddr, TcpStream},
     time::{Duration, Instant},
 };
 
 use nu_plugin::{self, EvaluatedCall, LabeledError};
-use nu_protocol::{record, Category, PluginExample, PluginSignature, Span, SyntaxShape, Value};
+use nu_protocol::{
+    record, Category, PluginExample, PluginSignature, ShellError, Span, SyntaxShape, Value,
+};
 
 pub struct Plugin;
 
@@ -15,7 +16,7 @@ impl nu_plugin::Plugin for Plugin {
         vec![PluginSignature::build("port scan")
             .usage("The `port scan` command serves a similar purpose to the `nc -vz {ip} {port}` command,\nIt allows you to detect open ports on a target and provides valuable information about the connection time.")
             .required(
-                "target ip",
+                "target IP",
                 SyntaxShape::String,
                 "target IP address to check for open port",
             )
@@ -73,88 +74,114 @@ impl nu_plugin::Plugin for Plugin {
         call: &EvaluatedCall,
         _input: &Value,
     ) -> Result<Value, LabeledError> {
-        let (target, port) = extract_params(call);
-
-        let (real_target, real_port) = load_address(&target, &port);
-
-        let timeout: i64 = match call.get_flag_value("timeout") {
-            Some(duration) => match duration.as_duration() {
-                Ok(value) => value,
-                Err(_) => panic!("Error reading duration"),
-            },
-            None => DEFAULT_TIMEOUT,
+        let (target, port) = match extract_params(call) {
+            Ok((target, port)) => (target, port),
+            Err(e) => return Err(LabeledError::from(e)),
         };
-        let duration = Duration::from_nanos(timeout.unsigned_abs());
 
-        let address = format!("{}:{}", real_target, port.as_int().unwrap()).parse::<SocketAddr>();
-
-        if address.is_err() {
-            let span = Span::new(target.span().start, port.span().end);
-            return Err(LabeledError {
-                label: "Address parser exception".to_string(),
-                msg: format!(
-                    "as `{}:{}` got `{}` error. do not use domain name in address",
-                    real_target,
-                    real_port,
-                    address.err().unwrap().to_string()
-                ),
-                span: Some(span),
-            });
-        }
-        let now = Instant::now();
-        let is_open = check_connection(address, duration);
-        let elapsed = now.elapsed().as_millis();
-        let result = match is_open {
+        let real_target = match target.as_string() {
+            Ok(real_target) => real_target,
+            Err(e) => {
+                return Err(LabeledError {
+                    label: "Target Address error".to_string(),
+                    msg: e.to_string(),
+                    span: Some(target.span()),
+                })
+            }
+        };
+        let real_port = match port.as_int() {
+            Ok(real_port) => real_port,
+            Err(e) => {
+                return Err(LabeledError {
+                    label: "Target Address error".to_string(),
+                    msg: e.to_string(),
+                    span: Some(port.span()),
+                })
+            }
+        };
+        let address = match format!("{}:{}", real_target, real_port).parse::<SocketAddr>() {
+            Ok(address) => address,
+            Err(err) => {
+                let span = Span::new(target.span().start, port.span().end);
+                return Err(LabeledError {
+                    label: "Address parser exception".to_string(),
+                    msg: format!(
+                        "as `{}:{}` got `{}`. note: do not use domain name in address.",
+                        real_target, real_port, err,
+                    ),
+                    span: Some(span),
+                });
+            }
+        };
+        let (is_open, elapsed) = match scan(call, address) {
+            Ok(value) => value,
+            Err(value) => return Err(value),
+        };
+        let str_result = match is_open {
             true => "Open",
             false => "Closed",
         };
-
+        let elapsed = match elapsed.try_into() {
+            Ok(elapsed) => elapsed,
+            Err(_) => -1,
+        };
         Ok(Value::record(
             record! {
                 "address" => Value::string(real_target, target.span()),
                 "port" => Value::int(real_port, port.span()),
-                "result" => Value::string(result.to_string(), call.head),
+                "result" => Value::string(str_result, call.head),
                 "is_open"=> Value::bool(is_open, call.head),
-                "elapsed" =>  Value::int(elapsed.try_into().unwrap(), call.head),
+                "elapsed" =>  Value::int(elapsed, call.head),
             },
             call.head,
         ))
     }
 }
 
-fn check_connection(
-    address: Result<SocketAddr, std::net::AddrParseError>,
-    duration: Duration,
-) -> bool {
-    match TcpStream::connect_timeout(&address.unwrap(), duration) {
+fn scan(call: &EvaluatedCall, target_address: SocketAddr) -> Result<(bool, u128), LabeledError> {
+    let timeout: i64 = match call.get_flag_value("timeout") {
+        Some(duration) => match duration.as_duration() {
+            Ok(timeout) => timeout,
+            Err(_) => DEFAULT_TIMEOUT,
+        },
+        None => DEFAULT_TIMEOUT,
+    };
+    let duration = Duration::from_nanos(timeout.unsigned_abs());
+
+    let now = Instant::now();
+    let is_open = check_connection(target_address, duration);
+    let elapsed = now.elapsed().as_millis();
+
+    Ok((is_open, elapsed))
+}
+
+fn check_connection(address: SocketAddr, duration: Duration) -> bool {
+    match TcpStream::connect_timeout(&address, duration) {
         Ok(_) => true,
         Err(_) => false,
     }
 }
 
-fn load_address(target: &Value, port: &Value) -> (String, i64) {
-    let real_target = match target.as_string() {
-        Ok(value) => value,
-        Err(_) => panic!("Address value cannot be parsed to string"),
-    };
-
-    let real_port = match port.as_int() {
-        Ok(value) => value,
-        Err(_) => panic!("Port value cannot be parsed to integer"),
-    };
-    (real_target, real_port)
-}
-
-fn extract_params(call: &EvaluatedCall) -> (Value, Value) {
+fn extract_params(call: &EvaluatedCall) -> Result<(Value, Value), ShellError> {
     let target: Value = match call.req(0) {
         Ok(value) => value,
-        Err(_) => panic!("Given value for target is not correct"),
+        Err(_) => {
+            return Err(ShellError::MissingParameter {
+                param_name: "target IP".to_string(),
+                span: call.head,
+            })
+        }
     };
     let port: Value = match call.req(1) {
         Ok(value) => value,
-        Err(_) => panic!("Given value for port is not correct"),
+        Err(_) => {
+            return Err(ShellError::MissingParameter {
+                param_name: "target Port".to_string(),
+                span: call.head,
+            })
+        }
     };
-    (target, port)
+    Ok((target, port))
 }
 
 fn main() {
