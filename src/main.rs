@@ -1,6 +1,6 @@
 use std::{
     net::{SocketAddr, TcpStream},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use nu_plugin::{self, EvaluatedCall, LabeledError};
@@ -34,7 +34,12 @@ impl nu_plugin::Plugin for Plugin {
         _input: &Value,
     ) -> Result<Value, LabeledError> {
         let default_timeout = 60000000000;
-        let cols = vec!["address".to_owned(), "port".to_owned(), "result".to_owned()];
+        let cols = vec![
+            "address".to_owned(),
+            "port".to_owned(),
+            "result".to_owned(),
+            "elapsed (ms)".to_string(),
+        ];
         let target: Value = call.req(0).unwrap();
         let port: Value = call.req(1).unwrap();
 
@@ -51,12 +56,19 @@ impl nu_plugin::Plugin for Plugin {
         if address.is_err() {
             let span = Span::new(target.span().start, port.span().end);
             return Err(LabeledError {
-                label: "Parse Address Error".to_string(),
-                msg: "Check the given address".to_string(),
+                label: "Address parser exception".to_string(),
+                msg: format!(
+                    "as `{}:{}` got `{}` error",
+                    target.as_string().unwrap(),
+                    port.as_int().unwrap(),
+                    address.err().unwrap().to_string()
+                ),
                 span: Option::Some(span),
             });
         }
+        let now = Instant::now();
         if let Ok(_) = TcpStream::connect_timeout(&address.unwrap(), duration) {
+            let elapsed = now.elapsed().as_millis();
             return Ok(Value::Record {
                 val: Record {
                     cols: cols,
@@ -64,18 +76,21 @@ impl nu_plugin::Plugin for Plugin {
                         Value::string(target.as_string().unwrap(), target.span()),
                         Value::string(port.as_int().unwrap().to_string(), port.span()),
                         Value::string("Open".to_string(), call.head),
+                        Value::string(elapsed.to_string(), call.head),
                     ],
                 },
                 internal_span: call.head,
             });
         } else {
+            let elapsed = now.elapsed().as_millis();
             return Ok(Value::Record {
                 val: Record {
                     cols: cols,
                     vals: vec![
                         Value::string(target.as_string().unwrap(), target.span()),
-                        Value::string(port.as_int().unwrap().to_string(), port.span()),
+                        Value::string(port.as_string().unwrap(), port.span()),
                         Value::string("Closed".to_string(), call.head),
+                        Value::string(elapsed.to_string(), call.head),
                     ],
                 },
                 internal_span: call.head,
