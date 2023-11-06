@@ -5,7 +5,7 @@ use std::{
 };
 
 use nu_plugin::{self, EvaluatedCall, LabeledError};
-use nu_protocol::{Category, PluginExample, PluginSignature, Record, Span, SyntaxShape, Value};
+use nu_protocol::{record, Category, PluginExample, PluginSignature, Span, SyntaxShape, Value};
 
 pub struct Plugin;
 
@@ -24,60 +24,44 @@ impl nu_plugin::Plugin for Plugin {
                 "timeout",
                 SyntaxShape::Duration,
                 "time before giving up the connection. (default: 60 Seconds)",
-                Option::Some('t'),
+                Some('t'),
             )
             .plugin_examples(
                 vec![
                     PluginExample{
                         example: "port scan 8.8.8.8 53 -t 1sec".to_string(),
                         description : "this will create a Tcp connection to port 53 on 8.8.8.8 (Google's public dns) and return the connection time".to_string(),
-                        result: Option::Some(
-                            Value::Record {
-                                val: Record {
-                                    cols: vec![
-                                        "address".to_owned(),
-                                        "port".to_owned(),
-                                        "result".to_owned(),
-                                        "elapsed (ms)".to_string(),
-                                    ],
-                                    vals: vec![
-                                        Value::string("8.8.8.8".to_string(), Span::new(0, 0)),
-                                        Value::string("53".to_string(), Span::new(0, 0)),
-                                        Value::string("Open".to_string(), Span::new(0, 0)),
-                                        Value::string("42".to_string(), Span::new(0, 0)),
-                                    ],
+                        result: Some(
+                            Value::record(
+                                record! {
+                                    "address" => Value::test_string("8.8.8.8".to_string()),
+                                    "port" => Value::test_int(53),
+                                    "result" => Value::test_string("Open", ),
+                                    "elapsed" =>  Value::test_int(40),
                                 },
-                                internal_span: Span::new(0, 0),
-                            }
+                                Span::unknown(),
+                            )
                         ),
                     },
                     PluginExample{
                         example: "port scan 8.8.8.8 54 -t 1sec".to_string(),
                         description : "this will create a Tcp connection to port 54 on 8.8.8.8 (Google's public dns). this will result in an error".to_string(),
-                        result: Option::Some(
-                            Value::Record {
-                                val: Record {
-                                    cols: vec![
-                                        "address".to_owned(),
-                                        "port".to_owned(),
-                                        "result".to_owned(),
-                                        "elapsed (ms)".to_string(),
-                                    ],
-                                    vals: vec![
-                                        Value::string("8.8.8.8".to_string(), Span::new(0, 0)),
-                                        Value::string("53".to_string(), Span::new(0, 0)),
-                                        Value::string("Closed".to_string(), Span::new(0, 0)),
-                                        Value::string("1000".to_string(), Span::new(0, 0)),
-                                    ],
-                                },
-                                internal_span: Span::new(0, 0),
-                            }
-                        ),
+                        result: Some(
+                                Value::record(
+                                    record! {
+                                        "address" => Value::test_string("8.8.8.8".to_string()),
+                                        "port" => Value::test_int(54),
+                                        "result" => Value::test_string("Closed", ),
+                                        "elapsed" =>  Value::test_int(1000),
+                                    },
+                                    Span::unknown(),
+                                )
+                            ),
                     },
                     PluginExample{
                         example: "7880..8000 | each { |it| port scan 127.0.0.1 $it -t 1ms } | where result == Open".to_string(),
                         description : "This command will scan any port from 7880 to 8000 on localhost and return open ports in range".to_string(),
-                        result: Option::None,
+                        result: None,
                     },
                 ],)
             .category(Category::Network)]
@@ -89,12 +73,6 @@ impl nu_plugin::Plugin for Plugin {
         call: &EvaluatedCall,
         _input: &Value,
     ) -> Result<Value, LabeledError> {
-        let cols = vec![
-            "address".to_owned(),
-            "port".to_owned(),
-            "result".to_owned(),
-            "elapsed (ms)".to_string(),
-        ];
         let (target, port) = extract_params(call);
 
         let (real_target, real_port) = load_address(&target, &port);
@@ -120,7 +98,7 @@ impl nu_plugin::Plugin for Plugin {
                     real_port,
                     address.err().unwrap().to_string()
                 ),
-                span: Option::Some(span),
+                span: Some(span),
             });
         }
         let now = Instant::now();
@@ -130,18 +108,17 @@ impl nu_plugin::Plugin for Plugin {
             true => "Open",
             false => "Closed",
         };
-        Ok(Value::Record {
-            val: Record {
-                cols: cols,
-                vals: vec![
-                    Value::string(real_target, target.span()),
-                    Value::string(real_port.to_string(), port.span()),
-                    Value::string(result.to_string(), call.head),
-                    Value::string(elapsed.to_string(), call.head),
-                ],
+
+        Ok(Value::record(
+            record! {
+                "address" => Value::string(real_target, target.span()),
+                "port" => Value::int(real_port, port.span()),
+                "result" => Value::string(result.to_string(), call.head),
+                "is_open"=> Value::bool(is_open, call.head),
+                "elapsed" =>  Value::int(elapsed.try_into().unwrap(), call.head),
             },
-            internal_span: call.head,
-        })
+            call.head,
+        ))
     }
 }
 
