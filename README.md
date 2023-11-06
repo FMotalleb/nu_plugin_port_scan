@@ -18,7 +18,7 @@ Similar to `nc -vz {ip} {port} -w {timeout}` the parameters are mapped to `port 
 ```
 
 ```bash
-~> 50..60 | each { |it| port scan 8.8.8.8 $it -t 100ms } |  where is_open
+~> 50..60 | par-each { |it| port scan 8.8.8.8 $it -t 100ms } |  where is_open | collect { $in }
 ╭───┬─────────┬──────┬────────┬─────────┬─────────╮
 │ # │ address │ port │ result │ is_open │ elapsed │
 ├───┼─────────┼──────┼────────┼─────────┼─────────┤
