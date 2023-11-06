@@ -8,22 +8,22 @@ Similar to `nc -vz {ip} {port} -w {timeout}` the parameters are mapped to `port 
 
 ```bash
 ~> port scan 8.8.8.8 53
-╭──────────────┬─────────╮
-│ address      │ 8.8.8.8 │
-│ port         │ 53      │
-│ result       │ Open    │
-│ elapsed (ms) │ 37      │
-╰──────────────┴─────────╯
+╭─────────┬─────────╮
+│ address │ 8.8.8.8 │
+│ port    │ 53      │
+│ result  │ Open    │
+│ is_open │ true    │
+│ elapsed │ 39      │
+╰─────────┴─────────╯
 ```
 
 ```bash
-~> 15..25 | each { |it| port scan 127.0.0.1 $it -t 1ms } |  where result == Open
-╭───┬───────────┬──────┬────────┬──────────────╮
-│ # │ address   │ port │ result │ elapsed (ms) │
-├───┼───────────┼──────┼────────┼──────────────┤
-│ 0 │ 127.0.0.1 │ 21   │ Open   │ 0            │
-│ 1 │ 127.0.0.1 │ 22   │ Open   │ 0            │
-╰───┴───────────┴──────┴────────┴──────────────╯
+~> 50..60 | each { |it| port scan 8.8.8.8 $it -t 100ms } |  where is_open
+╭───┬─────────┬──────┬────────┬─────────┬─────────╮
+│ # │ address │ port │ result │ is_open │ elapsed │
+├───┼─────────┼──────┼────────┼─────────┼─────────┤
+│ 0 │ 8.8.8.8 │   53 │ Open   │ true    │      41 │
+╰───┴─────────┴──────┴────────┴─────────┴─────────╯
 ```
 
 ## Installing
@@ -35,4 +35,11 @@ git clone https://github.com/FMotalleb/nu_plugin_port_scan.git
 cd nu_plugin_port_scan
 cargo build
 register target/debug/nu_plugin_port_scan
+```
+
+* or using cargo
+
+```bash
+cargo install nu_plugin_port_scan
+register  ~/.cargo/bin/nu_plugin_port_scan
 ```
