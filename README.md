@@ -40,7 +40,15 @@ Similar to `nc -vz {ip} {port} -w {timeout}` the parameters are mapped to `port 
 
 ## Installing
 
-* via git
+* using [nupm](https://github.com/nushell/nupm)
+
+```bash
+git clone https://github.com/FMotalleb/nu_plugin_port_scan.git
+cd nu_plugin_port_scan
+nupm install --path . -f
+```
+
+* or compile manually
 
 ```bash
 git clone https://github.com/FMotalleb/nu_plugin_port_scan.git
