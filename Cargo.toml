@@ -6,10 +6,10 @@ keywords = ["nushell", "network", "plugin"]
 homepage = "https://github.com/FMotalleb/nu_plugin_port_scan"
 repository = "https://github.com/FMotalleb/nu_plugin_port_scan"
 description = "A nushell plugin for scanning ports on a target"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2021"
 readme = "README.md"
 
 [dependencies]
-nu-plugin = "0.86.0"
-nu-protocol = { version = "0.86.0", features = ["plugin"] }
+nu-plugin = "0.87.0"
+nu-protocol = { version = "0.87.0", features = ["plugin"] }
