@@ -744,7 +744,7 @@ dependencies = [
 
 [[package]]
 name = "nu_plugin_port_scan"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "nu-plugin",
  "nu-protocol",
