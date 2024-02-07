@@ -73,6 +73,7 @@ impl nu_plugin::Plugin for Plugin {
     fn run(
         &mut self,
         _name: &str,
+        _config: &Option<Value>,
         call: &EvaluatedCall,
         _input: &Value,
     ) -> Result<Value, LabeledError> {
