@@ -82,7 +82,7 @@ impl nu_plugin::Plugin for Plugin {
             Err(e) => return Err(LabeledError::from(e)),
         };
 
-        let real_target = match target.as_string() {
+        let real_target = match target.as_str() {
             Ok(real_target) => real_target,
             Err(e) => {
                 return Err(LabeledError {
