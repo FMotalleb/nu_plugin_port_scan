@@ -1,11 +1,14 @@
+use crate::PortScanPlugin;
+use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand};
+use nu_protocol::{
+    record, Category, ErrorLabel, Example, LabeledError, PipelineData, ShellError, Signature, Span,
+    SyntaxShape, Value,
+};
 use std::net::{SocketAddr, TcpStream};
 use std::time::{Duration, Instant};
-use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand};
-use nu_protocol::{Category, ErrorLabel, LabeledError, PipelineData, record, ShellError, Signature, Span, SyntaxShape, Value};
-use crate::PortScanPlugin;
-
 
 const DEFAULT_TIMEOUT: i64 = 60000000000;
+const TIME_MULTIPLIER: i64 = 1000000;
 
 #[derive(Default)]
 pub struct PortScan {}
@@ -17,7 +20,10 @@ impl PortScan {
 }
 
 impl PortScan {
-    fn scan(call: &EvaluatedCall, target_address: SocketAddr) -> Result<(bool, u128), LabeledError> {
+    fn scan(
+        call: &EvaluatedCall,
+        target_address: SocketAddr,
+    ) -> Result<(bool, u128), LabeledError> {
         let timeout: i64 = match call.get_flag_value("timeout") {
             Some(duration) => duration.as_duration().unwrap_or_else(|_| DEFAULT_TIMEOUT),
             None => DEFAULT_TIMEOUT,
@@ -37,7 +43,9 @@ impl PortScan {
         }
     }
 
-    fn extract_params(call: &EvaluatedCall) -> Result<(nu_protocol::Value, nu_protocol::Value), ShellError> {
+    fn extract_params(
+        call: &EvaluatedCall,
+    ) -> Result<(nu_protocol::Value, nu_protocol::Value), ShellError> {
         let target: nu_protocol::Value = match call.req(0) {
             Ok(value) => value,
             Err(_) => {
@@ -66,7 +74,6 @@ impl PluginCommand for PortScan {
     fn name(&self) -> &str {
         "port scan"
     }
-
     fn signature(&self) -> Signature {
         Signature::build("port scan")
             .usage("The `port scan` command serves a similar purpose to the `nc -vz {ip} {port}` command,\nIt allows you to detect open ports on a target and provides valuable information about the connection time.")
@@ -82,51 +89,52 @@ impl PluginCommand for PortScan {
                 "time before giving up the connection. (default: 60 Seconds)",
                 Some('t'),
             )
-            // .plugin_examples(
-            //     vec![
-            //         PluginExample{
-            //             example: "port scan 8.8.8.8 53 -t 1sec".to_string(),
-            //             description : "this will create a Tcp connection to port 53 on 8.8.8.8 (Google's public dns) and return the connection time".to_string(),
-            //             result: Some(
-            //                 Value::record(
-            //                     record! {
-            //                         "address" => Value::test_string("8.8.8.8".to_string()),
-            //                         "port" => Value::test_int(53),
-            //                         "result" => Value::test_string("Open", ),
-            //                         "is_open"=> Value::test_bool(true, ),
-            //                         "elapsed" =>  Value::test_int(40),
-            //                     },
-            //                     Span::unknown(),
-            //                 )
-            //             ),
-            //         },
-            //         PluginExample{
-            //             example: "port scan 8.8.8.8 54 -t 1sec".to_string(),
-            //             description : "this will create a Tcp connection to port 54 on 8.8.8.8 (Google's public dns). this will result in an error".to_string(),
-            //             result: Some(
-            //                 Value::record(
-            //                     record! {
-            //                             "address" => Value::test_string("8.8.8.8".to_string()),
-            //                             "port" => Value::test_int(54),
-            //                             "result" => Value::test_string("Closed", ),
-            //                             "is_open"=> Value::test_bool(false, ),
-            //                             "elapsed" =>  Value::test_int(1000),
-            //                         },
-            //                     Span::unknown(),
-            //                 )
-            //             ),
-            //         },
-            //         PluginExample{
-            //             example: "7880..8000 | each { |it| port scan 127.0.0.1 $it -t 1ms } | where result == Open".to_string(),
-            //             description : "This command will scan any port from 7880 to 8000 on localhost and return open ports in range".to_string(),
-            //             result: None,
-            //         },
-            //     ],)
             .category(Category::Network)
     }
-
     fn usage(&self) -> &str {
         "The `port scan` command serves a similar purpose to the `nc -vz {ip} {port}` command,\nIt allows you to detect open ports on a target and provides valuable information about the connection time."
+    }
+
+    fn examples(&self) -> Vec<Example> {
+        vec![
+            Example {
+                example: "port scan 8.8.8.8 53 -t 1sec",
+                description: "this will create a Tcp connection to port 53 on 8.8.8.8 (Google's public dns) and return the connection time",
+                result: Some(
+                    Value::record(
+                        record! {
+                                "address" => Value::test_string("8.8.8.8".to_string()),
+                                "port" => Value::test_int(53),
+                                "result" => Value::test_string("Open", ),
+                                "is_open"=> Value::test_bool(true, ),
+                                "elapsed" =>  Value::test_duration(40*TIME_MULTIPLIER),
+                            },
+                        Span::unknown(),
+                    )
+                ),
+            },
+            Example {
+                example: "port scan 8.8.8.8 54 -t 1sec",
+                description: "this will create a Tcp connection to port 54 on 8.8.8.8 (Google's public dns). this will result in an error",
+                result: Some(
+                    Value::record(
+                        record! {
+                                "address" => Value::test_string("8.8.8.8".to_string()),
+                                "port" => Value::test_int(54),
+                                "result" => Value::test_string("Closed", ),
+                                "is_open"=> Value::test_bool(false, ),
+                                "elapsed" =>  Value::test_duration(1000*TIME_MULTIPLIER),
+                            },
+                        Span::unknown(),
+                    )
+                ),
+            },
+            Example {
+                example: "7880..8000 | each { |it| port scan 127.0.0.1 $it -t 1ms } | where result == Open",
+                description: "This command will scan any port from 7880 to 8000 on localhost and return open ports in range",
+                result: None,
+            },
+        ]
     }
 
     fn run(
@@ -146,7 +154,10 @@ impl PluginCommand for PortScan {
             Err(e) => {
                 return Err(LabeledError {
                     msg: e.to_string(),
-                    labels: vec![ErrorLabel { text: "Target Address error".to_string(), span: target.span() }],
+                    labels: vec![ErrorLabel {
+                        text: "Target Address error".to_string(),
+                        span: target.span(),
+                    }],
                     code: None,
                     url: None,
                     help: None,
@@ -159,7 +170,10 @@ impl PluginCommand for PortScan {
             Err(e) => {
                 return Err(LabeledError {
                     msg: e.to_string(),
-                    labels: vec![ErrorLabel { text: "Target Address error".to_string(), span: port.span() }],
+                    labels: vec![ErrorLabel {
+                        text: "Target Address error".to_string(),
+                        span: port.span(),
+                    }],
                     code: None,
                     url: None,
                     help: None,
@@ -176,7 +190,10 @@ impl PluginCommand for PortScan {
                         "as `{}:{}` got `{}`. note: do not use domain name in address.",
                         real_target, real_port, err,
                     ),
-                    labels: vec![ErrorLabel { text: "Address parser exception".to_string(), span }],
+                    labels: vec![ErrorLabel {
+                        text: "Address parser exception".to_string(),
+                        span,
+                    }],
                     code: None,
                     url: None,
                     help: None,
@@ -197,17 +214,15 @@ impl PluginCommand for PortScan {
         Ok(PipelineData::Value(
             Value::record(
                 record! {
-                "address" => nu_protocol::Value::string(real_target, target.span()),
-                "port" => nu_protocol::Value::int(real_port, port.span()),
-                "result" => nu_protocol::Value::string(str_result, call.head),
-                "is_open"=> nu_protocol::Value::bool(is_open, call.head),
-                "elapsed" =>  nu_protocol::Value::duration(elapsed, call.head),
-            },
+                    "address" => nu_protocol::Value::string(real_target, target.span()),
+                    "port" => nu_protocol::Value::int(real_port, port.span()),
+                    "result" => nu_protocol::Value::string(str_result, call.head),
+                    "is_open"=> nu_protocol::Value::bool(is_open, call.head),
+                    "elapsed" =>  nu_protocol::Value::duration(elapsed, call.head),
+                },
                 call.head,
             ),
             None,
-        )
-        )
+        ))
     }
 }
-
