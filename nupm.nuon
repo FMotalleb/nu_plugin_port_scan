@@ -1,7 +1,1 @@
-{
-  "name": "nu_plugin_port_scan",
-  "version": "1.0.11",
-  "description": "A nushell plugin for scanning ports on a target",
-  "license": "LICENSE",
-  "type": "custom"
-}
+{name: nu_plugin_port_scan, version: "1.2.0", description: "A nushell plugin for scanning ports on a target", license: LICENSE, type: custom}

@@ -8,6 +8,6 @@ def main [package_file: path] {
     let name = open ($repo_root | path join "Cargo.toml") | get package.name
     let ext = if ($nu.os-info.name == 'windows') { '.exe' } else { '' }
     cargo install --path $repo_root --root $install_root
-    nu --commands $"register ($install_root | path join "bin" $name)($ext)"
+    plugin add $"($install_root | path join "bin" $name)($ext)"
     log info "do not forget to restart Nushell for the plugin to be fully available!"
 }
