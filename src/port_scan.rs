@@ -6,7 +6,6 @@ use nu_protocol::{
 };
 use std::io::{ Read, Write};
 use std::net::{SocketAddr, TcpStream};
-use std::thread::sleep;
 use std::time::{Duration, Instant};
 use std::vec;
 
