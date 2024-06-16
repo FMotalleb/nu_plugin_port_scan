@@ -4,8 +4,10 @@ use nu_protocol::{
     record, Category, ErrorLabel, Example, LabeledError, PipelineData, ShellError, Signature, Span,
     SyntaxShape, Value,
 };
+use std::io::{ Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::time::{Duration, Instant};
+use std::vec;
 
 const DEFAULT_TIMEOUT: i64 = 60000000000;
 const TIME_MULTIPLIER: i64 = 1000000;
@@ -29,16 +31,58 @@ impl PortScan {
             None => DEFAULT_TIMEOUT,
         };
         let duration = Duration::from_nanos(timeout.unsigned_abs());
-
+        let send_data = match call.get_flag_value("send"){
+            Some(Value::String { val,.. }) => {
+                Some(val.chars().map(|i|i as u8).collect())
+            }                ,
+            _ => None,
+        };
+        let receive_count = match call.get_flag_value("receive-byte-count") {
+            Some(Value::Int { val, .. })=>{
+                val.unsigned_abs()
+            }
+            _=> 0
+        };
         let now = Instant::now();
-        let is_open = Self::check_connection(target_address, duration);
+        let is_open = Self::check_connection(target_address, duration,send_data,receive_count);
         let elapsed = now.elapsed().as_nanos();
 
         Ok((is_open, elapsed))
     }
-    fn check_connection(address: SocketAddr, duration: Duration) -> bool {
+    fn check_connection(
+        address: SocketAddr, 
+        duration: Duration,
+        send_data: Option<Vec<u8>>,
+        receive_byte_count: u64,
+    ) -> bool {
         match TcpStream::connect_timeout(&address, duration) {
-            Ok(_) => true,
+            Ok(mut stream) =>{
+                
+                eprintln!("Begin sending data");
+                if let Some(data )= send_data{
+                    if let Err(err)=  stream.write_all(&data) {
+                        eprintln!("Error writing to socket stream, {}", err);
+                    }else{
+                        eprintln!("no error sending data");
+                    }
+                }
+                stream.flush().unwrap();
+                eprintln!("After send data");
+                if let Err(err) = stream.set_read_timeout(Some(duration)){
+                    eprintln!("Error setting read timeout, {}", err);
+                }
+                
+                if receive_byte_count!=0 {
+                    eprintln!("Wait to read the amount of bytes requested");
+                    let buffer : Result<Vec<u8>,std::io::Error>=stream.bytes().take(receive_byte_count as usize).collect();
+                    match buffer{
+                        Ok(data) => eprintln!("Data received: {:?}", data),
+                        Err(err) => eprintln!("Error reading from socket stream, {}", err)
+                    }
+                    
+                }
+                true
+            },
             Err(_) => false,
         }
     }
@@ -89,6 +133,18 @@ impl PluginCommand for PortScan {
                 "time before giving up the connection. (default: 60 Seconds)",
                 Some('t'),
             )
+            .named(
+                "send",
+                SyntaxShape::String,
+                "data to send to the target at beginning of the connection",
+                Some('s'),
+            )
+            .named(
+                "receive-byte-count",
+                 SyntaxShape::Int, 
+                 "bytes to receive from the target (possibly after sending the `send` data) to mark the connection as open", 
+                 Some('b'),
+                )
             .category(Category::Network)
     }
     fn usage(&self) -> &str {
