@@ -10,6 +10,10 @@ impl nu_plugin::Plugin for PortScanPlugin {
     fn commands(&self) -> Vec<Box<dyn PluginCommand<Plugin = Self>>> {
         vec![Box::new(PortScan::new())]
     }
+
+    fn version(&self) -> String {
+        env!("CARGO_PKG_VERSION").into()
+    }
 }
 
 fn main() {

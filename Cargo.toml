@@ -1,9 +1,9 @@
 [dependencies]
-nu-plugin = "0.94.0"
+nu-plugin = "0.95.0"
 
 [dependencies.nu-protocol]
 features = ["plugin"]
-version = "0.94.0"
+version = "0.95.0"
 
 [package]
 authors = ["Motalleb Fallahnezhad <fmotalleb@gmail.com>"]
@@ -15,4 +15,4 @@ license = "MIT"
 name = "nu_plugin_port_scan"
 readme = "README.md"
 repository = "https://github.com/FMotalleb/nu_plugin_port_scan"
-version = "1.2.0"
+version = "1.2.1"
