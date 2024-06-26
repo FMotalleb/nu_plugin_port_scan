@@ -57,27 +57,31 @@ impl PortScan {
     ) -> bool {
         match TcpStream::connect_timeout(&address, duration) {
             Ok(mut stream) =>{
-                eprintln!("Begin sending data");
+                // eprintln!("Begin sending data");
                 if let Some(data )= send_data{
                     if let Err(err)=  stream.write_all(&data) {
                         eprintln!("Error writing to socket stream, {}", err);
                         return false;
-                    }else{
-                        eprintln!("no error sending data");
                     }
+                    // else{
+                    //      eprintln!("no error sending data");
+                    // }
                 }
-                stream.flush().unwrap();
-                eprintln!("After send data");
+                // stream.flush().unwrap();
+                // eprintln!("After send data");
                 if let Err(err) = stream.set_read_timeout(Some(duration)){
                     eprintln!("Error setting read timeout, {}", err);
                     return false;
                 }
                 
                 if receive_byte_count!=0 {
-                    eprintln!("Wait to read the amount of bytes requested");
+                    // eprintln!("Wait to read the amount of bytes requested");
                     let buffer : Result<Vec<u8>,std::io::Error>=stream.bytes().take(receive_byte_count as usize).collect();
                     let result= match buffer{
-                        Ok(data) =>{ eprintln!("Data received: {:?}", data); true},
+                        Ok(_) =>{
+                            // eprintln!("Data received: {:?}", data);
+                            true
+                        },
                         Err(err) => {eprintln!("Error reading from socket stream, {}", err); false}
                     };
                     return result
