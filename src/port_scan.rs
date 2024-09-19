@@ -126,7 +126,6 @@ impl PluginCommand for PortScan {
     }
     fn signature(&self) -> Signature {
         Signature::build("port scan")
-            .usage("The `port scan` command serves a similar purpose to the `nc -vz {ip} {port}` command,\nIt allows you to detect open ports on a target and provides valuable information about the connection time.")
             .required(
                 "target IP",
                 SyntaxShape::String,
@@ -153,7 +152,7 @@ impl PluginCommand for PortScan {
                 )
             .category(Category::Network)
     }
-    fn usage(&self) -> &str {
+    fn description(&self) -> &str {
         "The `port scan` command serves a similar purpose to the `nc -vz {ip} {port}` command,\nIt allows you to detect open ports on a target and provides valuable information about the connection time."
     }
 
