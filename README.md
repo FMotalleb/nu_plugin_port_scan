@@ -53,12 +53,12 @@ nupm install --path nu_plugin_port_scan -f
 git clone https://github.com/FMotalleb/nu_plugin_port_scan.git
 cd nu_plugin_port_scan
 cargo build
-register target/debug/nu_plugin_port_scan
+plugin add target/debug/nu_plugin_port_scan
 ```
 
 * or using cargo
 
 ```bash
 cargo install nu_plugin_port_scan
-register  ~/.cargo/bin/nu_plugin_port_scan
+plugin add ~/.cargo/bin/nu_plugin_port_scan
 ```
