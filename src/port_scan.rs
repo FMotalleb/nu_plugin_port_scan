@@ -1,7 +1,7 @@
 use crate::PortScanPlugin;
 use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand};
 use nu_protocol::{
-    record, Category, ErrorLabel, Example, LabeledError, PipelineData, ShellError, Signature, Span,
+    record, Category, Example, LabeledError, PipelineData, ShellError, Signature, Span,
     SyntaxShape, Value,
 };
 use std::io::{ Read, Write};
@@ -213,53 +213,23 @@ impl PluginCommand for PortScan {
         let real_target = match target.as_str() {
             Ok(real_target) => real_target,
             Err(e) => {
-                return Err(LabeledError {
-                    msg: e.to_string(),
-                    labels: vec![ErrorLabel {
-                        text: "Target Address error".to_string(),
-                        span: target.span(),
-                    }],
-                    code: None,
-                    url: None,
-                    help: None,
-                    inner: vec![],
-                });
+                return Err(LabeledError::new(e.to_string()).with_label("Target Address error", target.span()));
             }
         };
         let real_port = match port.as_int() {
             Ok(real_port) => real_port,
             Err(e) => {
-                return Err(LabeledError {
-                    msg: e.to_string(),
-                    labels: vec![ErrorLabel {
-                        text: "Target Address error".to_string(),
-                        span: port.span(),
-                    }],
-                    code: None,
-                    url: None,
-                    help: None,
-                    inner: vec![],
-                });
+                return Err(LabeledError::new(e.to_string()).with_label("Target Port error", port.span()));
             }
         };
         let address = match format!("{}:{}", real_target, real_port).parse::<SocketAddr>() {
             Ok(address) => address,
             Err(err) => {
                 let span = Span::new(target.span().start, port.span().end);
-                return Err(LabeledError {
-                    msg: format!(
-                        "as `{}:{}` got `{}`. note: do not use domain name in address.",
-                        real_target, real_port, err,
-                    ),
-                    labels: vec![ErrorLabel {
-                        text: "Address parser exception".to_string(),
-                        span,
-                    }],
-                    code: None,
-                    url: None,
-                    help: None,
-                    inner: vec![],
-                });
+                return Err(LabeledError::new(format!(
+                    "as `{}:{}` got `{}`. note: do not use domain name in address.",
+                    real_target, real_port, err,
+                )).with_label("Address parser exception".to_string(),span));
             }
         };
         let (is_open, elapsed) = match Self::scan(call, address) {
