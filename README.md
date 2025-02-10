@@ -1,4 +1,9 @@
-# nu_plugin_port_scan
+# nu_plugin_port_scan (Now Deprecated)
+
+Latest version of nushell supported: 0.102.0
+Deprecated in favor of [nu_plugin_port_extension](https://github.com/FMotalleb/nu_plugin_port_extension.git)
+which will be a mix of this plugin and port list plugin
+cli signature is not changed
 
 A [nushell](https://www.nushell.sh/) plugin for scanning ports on a target
 
